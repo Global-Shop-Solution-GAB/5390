@@ -1,0 +1,787 @@
+Program.Sub.ScreenSU.Start
+Gui.FormCopySOHist..Create
+Gui.FormCopySOHist..Caption("Copy Orders From History")
+Gui.FormCopySOHist..Size(6180,2700)
+Gui.FormCopySOHist..MinX(0)
+Gui.FormCopySOHist..MinY(0)
+Gui.FormCopySOHist..Position(0,0)
+Gui.FormCopySOHist..BackColor(-2147483633)
+Gui.FormCopySOHist..MaxButton(False)
+Gui.FormCopySOHist..MousePointer(0)
+Gui.FormCopySOHist..Sizeable(False)
+Gui.FormCopySOHist..Event(UnLoad,Form_UnLoad)
+Gui.FormCopySOHist.txtFrom.Create(TextBox,"",True,1215,300,0,120,450,True,0,"Arial",8,-2147483643,1)
+Gui.FormCopySOHist.txtFrom.Event(LostFocus,txtFrom_LostFocus)
+Gui.FormCopySOHist.txtFrom.NumericOnly(2)
+Gui.FormCopySOHist.lblFrom.Create(Label,"From Order",True,1200,255,0,75,240,True,0,"Arial",8,-2147483633,0)
+Gui.FormCopySOHist.lblFrom.DefaultValue("")
+Gui.FormCopySOHist.lblTo.Create(Label,"To Order",True,1200,255,0,1995,240,True,0,"Arial",8,-2147483633,0)
+Gui.FormCopySOHist.lblTo.DefaultValue("")
+Gui.FormCopySOHist.txtTo.Create(TextBox,"",True,1215,300,0,2040,450,False,0,"Arial",8,-2147483643,1)
+Gui.FormCopySOHist.txtTo.Event(LostFocus,txtTo_LostFocus)
+Gui.FormCopySOHist.txtTo.NumericOnly(2)
+Gui.FormCopySOHist.cmdFromBrowser.Create(Button)
+Gui.FormCopySOHist.cmdFromBrowser.Size(405,405)
+Gui.FormCopySOHist.cmdFromBrowser.Position(1380,405)
+Gui.FormCopySOHist.cmdFromBrowser.Caption("^")
+Gui.FormCopySOHist.cmdFromBrowser.Event(Click,cmdFromBrowser_Click)
+Gui.FormCopySOHist.txtCustomerPO.Create(TextBox,"",True,2415,300,0,3465,450,True,0,"Arial",8,-2147483643,1)
+Gui.FormCopySOHist.txtCustomerPO.Event(LostFocus,txtCustomerPO_LostFocus)
+Gui.FormCopySOHist.lblCustomerPO.Create(Label,"Customer PO",True,1935,255,0,3435,240,True,0,"Arial",8,-2147483633,0)
+Gui.FormCopySOHist.txtCustomer.Create(TextBox,"",True,1215,300,0,120,1305,True,0,"Arial",8,-2147483643,1)
+Gui.FormCopySOHist.txtCustomer.Event(LostFocus,txtCustomer_LostFocus)
+Gui.FormCopySOHist.lblCustomer.Create(Label,"Customer",True,870,255,0,105,1095,True,0,"Arial",8,-2147483633,0)
+Gui.FormCopySOHist.txtShipTo.Create(TextBox,"",True,1215,300,0,2040,1305,False,0,"Arial",8,-2147483643,1)
+Gui.FormCopySOHist.lblShipTo.Create(Label,"Ship To",True,1080,255,0,2025,1095,True,0,"Arial",8,-2147483633,0)
+Gui.FormCopySOHist.cmdCustomerBrowser.Create(Button)
+Gui.FormCopySOHist.cmdCustomerBrowser.Size(405,405)
+Gui.FormCopySOHist.cmdCustomerBrowser.Position(1380,1260)
+Gui.FormCopySOHist.cmdCustomerBrowser.Caption("^")
+Gui.FormCopySOHist.cmdCustomerBrowser.Event(Click,cmdCustomerBrowser_Click)
+Gui.FormCopySOHist.cmdShipToBrowser.Create(Button)
+Gui.FormCopySOHist.cmdShipToBrowser.Size(405,405)
+Gui.FormCopySOHist.cmdShipToBrowser.Position(3300,1260)
+Gui.FormCopySOHist.cmdShipToBrowser.Caption("^")
+Gui.FormCopySOHist.cmdShipToBrowser.Event(Click,cmdShipToBrowser_Click)
+Gui.FormCopySOHist.cmdShipToBrowser.Enabled(False)
+Gui.FormCopySOHist.cmdCopy.Create(Button)
+Gui.FormCopySOHist.cmdCopy.Size(990,375)
+Gui.FormCopySOHist.cmdCopy.Position(2250,1890)
+Gui.FormCopySOHist.cmdCopy.Caption("Copy")
+Gui.FormCopySOHist.cmdCopy.Event(Click,cmdCopy_Click)
+Gui.FormCopySOHist.cmdCopy.Enabled(False)
+Gui.FormCopySOHist.chkOpen.Create(CheckBox)
+Gui.FormCopySOHist.chkOpen.Size(2100,360)
+Gui.FormCopySOHist.chkOpen.Position(90,1905)
+Gui.FormCopySOHist.chkOpen.Caption("Open Order After Copy")
+Gui.FormCopySOHist.chkOpen.Value(1)
+Gui.FormCopySOHist.cmdClearShip.Create(Button)
+Gui.FormCopySOHist.cmdClearShip.Enabled(False)
+Gui.FormCopySOHist.cmdClearShip.Size(1230,375)
+Gui.FormCopySOHist.cmdClearShip.Position(3825,1290)
+Gui.FormCopySOHist.cmdClearShip.Caption("Clear Ship To")
+Gui.FormCopySOHist.cmdClearShip.Event(Click,ClearShip)
+Program.Sub.ScreenSU.End
+
+Program.Sub.Preflight.Start
+V.Global.sNextOrder.Declare(String)
+V.Global.iWait.Declare(Long)
+Program.External.Include.Library("ORDUPL.lib")
+Program.Sub.Preflight.End
+
+Program.Sub.Main.Start
+F.Intrinsic.Control.Try
+V.Local.sError.Declare
+
+'GCG_5390_CopySOFromHist.g2u
+'Trey S
+'1/9/2019
+'For SMS Group
+'This menu will copy orders from orders in history
+
+'Modified by FEQ on August 29th, 2019
+'To account for partial shipments on historic orders
+
+'COPY populate 49005
+F.Intrinsic.Control.If(V.Caller.Hook, =, 49005)
+	'script 1 button
+	V.Passed.000024.Set("From History")
+F.Intrinsic.Control.Else
+	F.Intrinsic.UI.SetBrowserHotTypeAhead(True)
+	F.Intrinsic.Control.CallSub(GetNextOrderNumber)
+
+	GUI.FormCopySOHist..Show
+F.Intrinsic.Control.EndIf
+
+F.Intrinsic.Control.Catch
+	F.Intrinsic.String.Build("Project: {0}{1}{1}Subroutine: {2}{1}Error Occurred {3} with description {4}{1}{1}GAB Version: {5}",V.Ambient.ScriptPath,V.Ambient.Newline,V.Ambient.CurrentSubroutine,V.Ambient.ErrorNumber,V.Ambient.ErrorDescription,V.Ambient.GABVersion,V.Local.sError)
+	F.Intrinsic.UI.Msgbox(V.Local.sError)
+	F.Intrinsic.Control.End 
+F.Intrinsic.Control.EndTry
+Program.Sub.Main.End
+
+Program.Sub.Form_UnLoad.Start
+F.Intrinsic.Control.Try
+V.Local.sError.Declare
+
+F.Intrinsic.Control.End
+
+F.Intrinsic.Control.Catch
+	F.Intrinsic.String.Build("Project: {0}{1}{1}Subroutine: {2}{1}Error Occurred {3} with description {4}{1}{1}GAB Version: {5}",V.Ambient.ScriptPath,V.Ambient.Newline,V.Ambient.CurrentSubroutine,V.Ambient.ErrorNumber,V.Ambient.ErrorDescription,V.Ambient.GABVersion,V.Local.sError)
+	F.Intrinsic.UI.Msgbox(V.Local.sError)
+	F.Intrinsic.Control.End 
+F.Intrinsic.Control.EndTry
+Program.Sub.Form_UnLoad.End
+
+Program.Sub.cmdFromBrowser_Click.Start
+F.Intrinsic.Control.Try
+V.Local.sError.Declare
+
+V.Local.sSQL.Declare(String)
+V.Local.sRet.Declare(String)
+V.Local.sColumns.Declare(String)
+V.Local.sWidths.Declare(String)
+
+V.Local.sSQL.Set("Select distinct RTRIM(ORDER_NO) as ORDER_NO, RTRIM(ORDER_SUFFIX) as ORDER_SUFFIX, RTRIM(CUSTOMER_PO) as CUSTOMER_PO, RTRIM(CUSTOMER) as CUSTOMER, RTRIM(NAME_CUSTOMER) as NAME_CUSTOMER, DATE_ORDER, RTRIM(PCK_NO) as PCK_NO, RTRIM(INVOICE) as INVOICE, RTRIM(CUSTOMER_SHIP) as CUSTOMER_SHIP from V_ORDER_HIST_HEAD order by ORDER_NO desc")
+V.Local.sColumns.Set("Order*!*Suffix*!*Customer PO*!*Customer*!*Name*!*Date*!*Packing No*!*Invoice*!*Ship")
+F.Intrinsic.String.Split(V.Local.sColumns, "*!*", V.Local.sColumns)
+V.Local.sWidths.Set("100*!*70*!*120*!*90*!*180*!*100*!*100*!*100*!*0")
+F.Intrinsic.String.Split(V.Local.sWidths, "*!*", V.Local.sWidths)
+
+F.ODBC.Connection!Con.OpenCompanyConnection
+F.Intrinsic.UI.Browser("Order History", "Con", V.Local.sSQL, V.Local.sColumns, V.Local.sWidths, V.Local.sRet)
+F.ODBC.Connection!Con.Close
+
+F.Intrinsic.Control.If(V.Local.sRet.IsNotCancel)
+	F.Intrinsic.String.Split(V.Local.sRet, "*!*", V.Local.sRet)
+	GUI.FormCopySOHist.txtFrom.Text(V.Local.sRet(0).Trim)
+	GUI.FormCopySOHist.txtCustomerPO.Text(V.Local.sRet(2).Trim)
+	GUI.FormCopySOHist.txtCustomer.Text(V.Local.sRet(3).Trim)
+	GUI.FormCopySOHist.txtShipTo.Text(V.Local.sRet(8).Trim)
+	GUI.FormCopySOHist.cmdCopy.Enabled(True)
+	GUI.FormCopySOHist.cmdShipToBrowser.Enabled(True)
+	GUI.FormCopySOHist.txtTo.Enabled(True)
+	GUI.FormCopySOHist.cmdClearShip.Enabled(True)
+F.Intrinsic.Control.EndIf
+
+F.Intrinsic.Control.Catch
+	F.Intrinsic.String.Build("Project: {0}{1}{1}Subroutine: {2}{1}Error Occurred {3} with description {4}{1}{1}GAB Version: {5}",V.Ambient.ScriptPath,V.Ambient.Newline,V.Ambient.CurrentSubroutine,V.Ambient.ErrorNumber,V.Ambient.ErrorDescription,V.Ambient.GABVersion,V.Local.sError)
+	F.Intrinsic.UI.Msgbox(V.Local.sError)
+	F.Intrinsic.Control.End 
+F.Intrinsic.Control.EndTry
+Program.Sub.cmdFromBrowser_Click.End
+
+Program.Sub.txtFrom_LostFocus.Start
+F.Intrinsic.Control.Try
+V.Local.sError.Declare
+
+V.Local.sSQL.Declare(String)
+V.Local.sRet.Declare(String)
+
+F.Intrinsic.Control.If(V.Screen.FormCopySOHist!txtFrom.Text.Trim, !=, "")
+	F.Intrinsic.String.Build("Select top 1 RTRIM(ORDER_NO) as ORDER_NO, RTRIM(CUSTOMER_PO) as CUSTOMER_PO, RTRIM(CUSTOMER) as CUSTOMER, RTRIM(CUSTOMER_SHIP) as CUSTOMER_SHIP from V_ORDER_HIST_HEAD where ORDER_NO like '%{0}' order by Order_NO", V.Screen.FormCopySOHist!txtFrom.Text.Trim, V.Local.sSQL)
+	
+	F.ODBC.Connection!Con.OpenCompanyConnection
+	F.ODBC.Connection!Con.ExecuteAndReturn(V.Local.sSQL, V.Local.sRet)
+	F.ODBC.Connection!Con.Close
+	
+	F.Intrinsic.Control.If(V.Ambient.ExecuteAndReturnEOF)
+		F.Intrinsic.UI.Msgbox("Invalid Order Number")
+		GUI.FormCopySOHist.cmdCopy.Enabled(False)
+	F.Intrinsic.Control.Else
+		F.Intrinsic.String.Split(V.Local.sRet, "*!*", V.Local.sRet)
+		GUI.FormCopySOHist.txtCustomer.Text(V.Local.sRet(2).Trim)
+		GUI.FormCopySOHist.txtFrom.Text(V.Local.sRet(0).Trim)
+		GUI.FormCopySOHist.txtCustomerPO.Text(V.Local.sRet(1).Trim)
+		GUI.FormCopySOHist.txtShipTo.Text(V.Local.sRet(3).Trim)
+		GUI.FormCopySOHist.cmdCopy.Enabled(True)
+		GUI.FormCopySOHist.txtTo.Enabled(True)
+		GUI.FormCopySOHist.cmdClearShip.Enabled(True)
+	F.Intrinsic.Control.EndIf
+F.Intrinsic.Control.Else
+	GUI.FormCopySOHist.txtTo.Enabled(False)
+	GUI.FormCopySOHist.cmdCopy.Enabled(False)
+F.Intrinsic.Control.EndIf
+
+F.Intrinsic.Control.Catch
+	F.Intrinsic.String.Build("Project: {0}{1}{1}Subroutine: {2}{1}Error Occurred {3} with description {4}{1}{1}GAB Version: {5}",V.Ambient.ScriptPath,V.Ambient.Newline,V.Ambient.CurrentSubroutine,V.Ambient.ErrorNumber,V.Ambient.ErrorDescription,V.Ambient.GABVersion,V.Local.sError)
+	F.Intrinsic.UI.Msgbox(V.Local.sError)
+	F.Intrinsic.Control.End 
+F.Intrinsic.Control.EndTry
+Program.Sub.txtFrom_LostFocus.End
+
+Program.Sub.txtCustomer_LostFocus.Start
+F.Intrinsic.Control.Try
+V.Local.sError.Declare
+
+V.Local.sSQL.Declare(String)
+V.Local.sRet.Declare(String)
+
+F.Intrinsic.Control.If(V.Screen.FormCopySOHist!txtCustomer.Text.Trim, !=, "")
+	F.Intrinsic.String.Build("Select top 1 RTRIM(Customer) as Customer from V_CUSTOMER_MASTER where Customer like '%{0}' order by Customer", V.Screen.FormCopySOHist!txtCustomer.Text.Trim, V.Local.sSQL)
+
+	F.ODBC.Connection!Con.OpenCompanyConnection
+	F.ODBC.Connection!Con.ExecuteAndReturn(V.Local.sSQL, V.Local.sRet)
+	F.ODBC.Connection!Con.Close
+	
+	F.Intrinsic.Control.If(V.Ambient.ExecuteAndReturnEOF)
+		F.Intrinsic.UI.Msgbox("Invalid Customer ID")
+		GUI.FormCopySOHist.txtShipTo.Text("")
+		GUI.FormCopySOHist.cmdCopy.Enabled(False)
+	F.Intrinsic.Control.Else
+		GUI.FormCopySOHist.txtCustomer.Text(V.Local.sRet.Trim)
+		GUI.FormCopySOHist.txtShipTo.Text("")
+	F.Intrinsic.Control.EndIf
+F.Intrinsic.Control.Else
+	GUI.FormCopySOHist.txtShipTo.Text("")
+	GUI.FormCopySOHist.cmdCopy.Enabled(False)
+F.Intrinsic.Control.EndIf
+
+F.Intrinsic.Control.Catch
+	F.Intrinsic.String.Build("Project: {0}{1}{1}Subroutine: {2}{1}Error Occurred {3} with description {4}{1}{1}GAB Version: {5}",V.Ambient.ScriptPath,V.Ambient.Newline,V.Ambient.CurrentSubroutine,V.Ambient.ErrorNumber,V.Ambient.ErrorDescription,V.Ambient.GABVersion,V.Local.sError)
+	F.Intrinsic.UI.Msgbox(V.Local.sError)
+	F.Intrinsic.Control.End 
+F.Intrinsic.Control.EndTry
+Program.Sub.txtCustomer_LostFocus.End
+
+Program.Sub.cmdCustomerBrowser_Click.Start
+F.Intrinsic.Control.Try
+V.Local.sError.Declare
+
+V.Local.sRet.Declare(String)
+
+F.Intrinsic.UI.Browser(205, "", V.Local.sRet)
+
+F.Intrinsic.Control.If(V.Local.sRet.IsNotCancel)
+	F.Intrinsic.String.Split(V.Local.sRet, "*!*", V.Local.sRet)
+	GUI.FormCopySOHist.txtCustomer.Text(V.Local.sRet(0))
+	GUI.FormCopySOHist.txtShipTo.Text("")
+	GUI.FormCopySOHist.cmdShipToBrowser.Enabled(True)
+F.Intrinsic.Control.EndIf
+
+F.Intrinsic.Control.Catch
+	F.Intrinsic.String.Build("Project: {0}{1}{1}Subroutine: {2}{1}Error Occurred {3} with description {4}{1}{1}GAB Version: {5}",V.Ambient.ScriptPath,V.Ambient.Newline,V.Ambient.CurrentSubroutine,V.Ambient.ErrorNumber,V.Ambient.ErrorDescription,V.Ambient.GABVersion,V.Local.sError)
+	F.Intrinsic.UI.Msgbox(V.Local.sError)
+	F.Intrinsic.Control.End 
+F.Intrinsic.Control.EndTry
+Program.Sub.cmdCustomerBrowser_Click.End
+
+Program.Sub.cmdShipToBrowser_Click.Start
+F.Intrinsic.Control.Try
+V.Local.sError.Declare
+
+V.Local.sSQL.Declare(String)
+V.Local.sColumns.Declare(String)
+V.Local.sWidths.Declare(String)
+V.Local.sRet.Declare(String)
+
+F.Intrinsic.String.Build("select RTRIM(SHIP_SEQ) as SHIPTO, RTRIM(CUSTOMER_NAME) as SHIPNAME from V_OE_MULTI_SHIP where CUSTOMER = '{0}' order by SHIP_SEQ", V.Screen.FormCopySOHist!txtCustomer.Text.Trim, V.Local.sSQL)
+V.Local.sColumns.Set("Ship To*!*Name")
+F.Intrinsic.String.Split(V.Local.sColumns, "*!*", V.Local.sColumns)
+V.Local.sWidths.Set("100*!*180")
+F.Intrinsic.String.Split(V.Local.sWidths, "*!*", V.Local.sWidths)
+
+F.ODBC.Connection!Con.OpenCompanyConnection
+F.Intrinsic.UI.Browser("Ship To", "Con", V.Local.sSQL, V.Local.sColumns, V.Local.sWidths, V.Local.sRet)
+F.ODBC.Connection!Con.Close
+
+F.Intrinsic.Control.If(V.Local.sRet.IsNotCancel)
+	F.Intrinsic.String.Split(V.Local.sRet, "*!*", V.Local.sRet)
+	GUI.FormCopySOHist.txtShipTo.Text(V.Local.sRet(0))
+F.Intrinsic.Control.EndIf
+
+F.Intrinsic.Control.Catch
+	F.Intrinsic.String.Build("Project: {0}{1}{1}Subroutine: {2}{1}Error Occurred {3} with description {4}{1}{1}GAB Version: {5}",V.Ambient.ScriptPath,V.Ambient.Newline,V.Ambient.CurrentSubroutine,V.Ambient.ErrorNumber,V.Ambient.ErrorDescription,V.Ambient.GABVersion,V.Local.sError)
+	F.Intrinsic.UI.Msgbox(V.Local.sError)
+	F.Intrinsic.Control.End 
+F.Intrinsic.Control.EndTry
+Program.Sub.cmdShipToBrowser_Click.End
+
+Program.Sub.txtTo_LostFocus.Start
+F.Intrinsic.Control.Try
+V.Local.sError.Declare
+
+V.Local.sSQL.Declare(String)
+V.Local.sRet.Declare(String)
+V.Local.sOrder.Declare(String)
+
+F.Intrinsic.Control.If(V.Screen.FormCopySOHist!txtTo.Text.Trim, !=, "")
+	F.Intrinsic.String.LPad(V.Screen.FormCopySOHist!txtTo.Text.Trim, "0", 7, V.Local.sOrder)
+	F.Intrinsic.String.Build("Select RTRIM(ORDER_NO) as ORDER_NO from V_ORDER_HEADER where ORDER_NO = '{0}'", V.Local.sOrder, V.Local.sSQL)
+
+	F.ODBC.Connection!Con.OpenCompanyConnection
+	F.ODBC.Connection!Con.ExecuteAndReturn(V.Local.sSQL, V.Local.sRet)
+	
+	F.Intrinsic.Control.If(V.Ambient.ExecuteAndReturnEOF.Not)
+		
+		F.Intrinsic.UI.Msgbox("Order Already Exists, setting to next open order...")
+		GUI.FormCopySOHist.txtTo.Text(V.Global.sNextOrder)
+		'GUI.FormCopySOHist.cmdCopy.Enabled(False)
+	F.Intrinsic.Control.Else
+		
+		F.Intrinsic.String.Build("Select RTRIM(ORDER_NO) as ORDER_NO from V_ORDER_HIST_HEAD where ORDER_NO = '{0}'", V.Local.sOrder, V.Local.sSQL)
+		F.ODBC.Connection!Con.ExecuteAndReturn(V.Local.sSQL, V.Local.sRet)
+		
+		F.Intrinsic.Control.If(V.Ambient.ExecuteAndReturnEOF.Not)
+			F.Intrinsic.UI.Msgbox("Order Already Exists, setting to next open order...")
+			GUI.FormCopySOHist.txtTo.Text(V.Global.sNextOrder)
+			'GUI.FormCopySOHist.cmdCopy.Enabled(False)
+		F.Intrinsic.Control.Else
+			GUI.FormCopySOHist.txtTo.Text(V.Local.sOrder)
+		F.Intrinsic.Control.EndIf
+	F.Intrinsic.Control.EndIf
+	
+	F.ODBC.Connection!Con.Close
+F.Intrinsic.Control.Else
+	
+	GUI.FormCopySOHist.txtTo.Text(V.Global.sNextOrder)
+	'GUI.FormCopySOHist.cmdCopy.Enabled(False)
+F.Intrinsic.Control.EndIf
+
+F.Intrinsic.Control.Catch
+	F.Intrinsic.String.Build("Project: {0}{1}{1}Subroutine: {2}{1}Error Occurred {3} with description {4}{1}{1}GAB Version: {5}",V.Ambient.ScriptPath,V.Ambient.Newline,V.Ambient.CurrentSubroutine,V.Ambient.ErrorNumber,V.Ambient.ErrorDescription,V.Ambient.GABVersion,V.Local.sError)
+	F.Intrinsic.UI.Msgbox(V.Local.sError)
+	F.Intrinsic.Control.End 
+F.Intrinsic.Control.EndTry
+Program.Sub.txtTo_LostFocus.End
+
+Program.Sub.GetNextOrderNumber.Start
+F.Intrinsic.Control.Try
+V.Local.sError.Declare
+
+V.Local.sSQL.Declare(String)
+V.Local.sTopOrder.Declare(String)
+V.Local.sTopHist.Declare(String)
+
+V.Local.sSQL.Set("select top 1 ORDER_NO from V_ORDER_HEADER order by ORDER_NO desc")
+F.ODBC.Connection!Con.OpenCompanyConnection
+F.ODBC.Connection!Con.ExecuteAndReturn(V.Local.sSQL, V.Local.sTopOrder)
+
+F.Intrinsic.Control.If(V.Ambient.ExecuteAndReturnEOF)
+	V.Local.sTopOrder.Set("0")
+F.Intrinsic.Control.EndIf
+
+V.Local.sSQL.Set("select top 1 ORDER_NO from V_ORDER_HIST_HEAD order by ORDER_NO desc")
+F.ODBC.Connection!Con.ExecuteAndReturn(V.Local.sSQL, V.Local.sTopHist)
+F.ODBC.Connection!Con.Close
+
+F.Intrinsic.Control.If(V.Ambient.ExecuteAndReturnEOF)
+	V.Local.sTopHist.Set("0")
+F.Intrinsic.Control.EndIf
+
+F.Intrinsic.Control.If(V.Local.sTopHist, >, V.Local.sTopOrder)
+	V.Local.sTopOrder.Set(V.Local.sTopHist)
+F.Intrinsic.Control.EndIf
+
+F.Intrinsic.Math.Add(V.Local.sTopOrder, 1, V.Local.sTopOrder)
+F.Intrinsic.String.LPad(V.Local.sTopOrder, "0", 7, V.Local.sTopOrder)
+GUI.FormCopySOHist.txtTo.Text(V.Local.sTopOrder)
+
+V.Global.sNextOrder.Set(V.Local.sTopOrder)
+
+F.Intrinsic.Control.Catch
+	F.Intrinsic.String.Build("Project: {0}{1}{1}Subroutine: {2}{1}Error Occurred {3} with description {4}{1}{1}GAB Version: {5}",V.Ambient.ScriptPath,V.Ambient.Newline,V.Ambient.CurrentSubroutine,V.Ambient.ErrorNumber,V.Ambient.ErrorDescription,V.Ambient.GABVersion,V.Local.sError)
+	F.Intrinsic.UI.Msgbox(V.Local.sError)
+	F.Intrinsic.Control.End 
+F.Intrinsic.Control.EndTry
+Program.Sub.GetNextOrderNumber.End
+
+Program.Sub.txtCustomerPO_LostFocus.Start
+F.Intrinsic.Control.Try
+V.Local.sError.Declare
+
+V.Local.sSQL.Declare(String)
+V.Local.sRet.Declare(String)
+V.Local.sPO.Declare(String)
+V.Local.sMessage.Declare(String)
+
+'I'm just gonna check CUstomer / PO combination for now
+V.Local.sPO.Set(V.Screen.FormCopySOHist!txtCustomerPO.Text.Trim)
+F.Intrinsic.Control.If(V.Local.sPO.Trim, !=, "", and, V.Screen.FormCopySOHist!txtCustomer.Text.Trim, !=, "")
+	F.Intrinsic.String.Build("Select RTRIM(ORDER_NO) as ORDER_NO from V_ORDER_HEADER where CUSTOMER_PO = '{0}' and CUSTOMER = '{1}'", V.Local.sPO, V.Screen.FormCopySOHist!txtCustomer.Text.Trim, V.Local.sSQL)
+
+	F.ODBC.Connection!ConPO.OpenCompanyConnection
+	F.ODBC.Connection!ConPO.ExecuteAndReturn(V.Local.sSQL, V.Local.sRet)
+	
+	F.Intrinsic.Control.If(V.Ambient.ExecuteAndReturnEOF.Not)
+		F.Intrinsic.String.Build("Warning: Duplicate customer PO found on Order #{0}", V.Local.sRet.Trim, V.Local.sMessage)
+		F.Intrinsic.UI.Msgbox(V.Local.sMessage)
+	F.Intrinsic.Control.Else
+		F.Intrinsic.String.Build("Select RTRIM(ORDER_NO) as ORDER_NO from V_ORDER_HIST_HEAD where CUSTOMER_PO = '{0}' and CUSTOMER = '{1}'", V.Local.sPO, V.Screen.FormCopySOHist!txtCustomer.Text.Trim, V.Local.sSQL)
+		F.ODBC.Connection!ConPO.ExecuteAndReturn(V.Local.sSQL, V.Local.sRet)
+		
+		F.Intrinsic.Control.If(V.Ambient.ExecuteAndReturnEOF.Not)
+			F.Intrinsic.String.Build("Warning: Duplicate customer PO found on Order #{0}", V.Local.sRet.Trim, V.Local.sMessage)
+			F.Intrinsic.UI.Msgbox(V.Local.sMessage)
+		F.Intrinsic.Control.EndIf
+	F.Intrinsic.Control.EndIf
+	F.ODBC.Connection!ConPO.Close
+F.Intrinsic.Control.EndIf
+
+F.Intrinsic.Control.Catch
+	F.Intrinsic.String.Build("Project: {0}{1}{1}Subroutine: {2}{1}Error Occurred {3} with description {4}{1}{1}GAB Version: {5}",V.Ambient.ScriptPath,V.Ambient.Newline,V.Ambient.CurrentSubroutine,V.Ambient.ErrorNumber,V.Ambient.ErrorDescription,V.Ambient.GABVersion,V.Local.sError)
+	F.Intrinsic.UI.Msgbox(V.Local.sError)
+	F.Intrinsic.Control.End 
+F.Intrinsic.Control.EndTry
+Program.Sub.txtCustomerPO_LostFocus.End
+
+Program.Sub.cmdCopy_Click.Start
+F.Intrinsic.Control.Try
+V.Local.sError.Declare
+
+'maybe check PO again here... If they never changed it there would definitely be a match
+'but do they care?
+'F.Intrinsic.Control.CallSub(txtCustomerPO_LostFocus)
+
+GUI.FormCopySOHist..Visible(False)
+F.Intrinsic.UI.InvokeWaitDialog("Getting order details...", "Copying")
+F.ODBC.Connection!Con.OpenCompanyConnection
+'WEBIMPORTER STUFF HERE
+F.Intrinsic.Control.CallSub(CopyOrder, "From", V.Screen.FormCopySOHist!txtFrom.Text.Trim, "To", V.Screen.FormCopySOHist!txtTo.Text.Trim, "Customer", V.Screen.FormCopySOHist!txtCustomer.Text.Trim, "CustPO", V.Screen.FormCopySOHist!txtCustomerPO.Text.Trim, "ShipTo", V.Screen.FormCopySOHist!txtShipTo.Text.Trim)
+F.Intrinsic.UI.ChangeWaitStatus("Checking web importer settings...")
+F.Intrinsic.Control.CallSub(CheckParamsTxt)
+F.Intrinsic.UI.ChangeWaitStatus("Uploading order...")
+F.Intrinsic.Control.CallSub(UploadOrder)
+GUI.FormCopySOHist.timer1.Enabled(False)
+F.Intrinsic.UI.ChangeWaitStatus("Checking upload...")
+F.Intrinsic.Control.CallSub(CheckUpload, "Order", V.Screen.FormCopySOHist!txtTo.Text.Trim)
+F.Intrinsic.UI.ChangeWaitStatus("Copying extra text...")
+F.Intrinsic.Control.CallSub(CopyExtraText, "From", V.Screen.FormCopySOHist!txtFrom.Text.Trim, "To", V.Screen.FormCopySOHist!txtTo.Text.Trim)
+
+F.ODBC.Connection!Con.Close
+
+F.Intrinsic.Control.If(V.Screen.FormCopySOHist!chkOpen.CheckedAsBoolean)
+	F.Intrinsic.UI.ChangeWaitStatus("Opening order...")
+	F.Intrinsic.Control.CallSub(OpenOrder, "Order", V.Screen.FormCopySOHist!txtTo.Text.Trim, "Customer", V.Screen.FormCopySOHist!txtCustomer.Text.Trim)
+	F.Intrinsic.UI.Sleep(8)
+F.Intrinsic.Control.EndIf
+F.Intrinsic.UI.CloseWaitDialog
+F.Intrinsic.Control.CallSub(Form_UnLoad)
+
+F.Intrinsic.Control.Catch
+	F.Intrinsic.String.Build("Project: {0}{1}{1}Subroutine: {2}{1}Error Occurred {3} with description {4}{1}{1}GAB Version: {5}",V.Ambient.ScriptPath,V.Ambient.Newline,V.Ambient.CurrentSubroutine,V.Ambient.ErrorNumber,V.Ambient.ErrorDescription,V.Ambient.GABVersion,V.Local.sError)
+	F.Intrinsic.UI.Msgbox(V.Local.sError)
+	F.Intrinsic.Control.End 
+F.Intrinsic.Control.EndTry
+Program.Sub.cmdCopy_Click.End
+
+Program.Sub.CopyOrder.Start
+F.Intrinsic.Control.Try
+V.Local.sError.Declare
+
+V.Local.sSQL.Declare(String)
+V.Local.sRet.Declare(String)
+V.Local.sOrder.Declare(String)
+V.Local.sUserID.Declare(String)
+V.Local.sFromLoc.Declare(String)
+V.Local.sCustomerPO.Declare(String)
+V.Local.sShipTo.Declare(String)
+V.Local.iCounter.Declare(Long)
+V.Local.sPart.Declare(String)
+V.Local.sReV.Declare(String)
+V.Local.sQTY.Declare(String)
+V.Local.sPrice.Declare(String)
+V.Local.sCost.Declare(String)
+V.Local.sOrderDate.Declare(String)
+V.Local.sPromiseDate.Declare(String)
+V.Local.sTemp.Declare(String)
+V.Local.dTemp.Declare(Date)
+V.Local.sNegativeQuantity.Declare(String)
+V.Local.bNegativeQuantity.Declare(Boolean)
+V.Local.iLength.Declare(Long)
+V.Local.sLine.Declare(String)
+V.Local.sOriginalOrder.Declare(String)
+V.Local.sNewOrder.Declare(String)
+V.Local.sCustomer.Declare(String)
+V.Local.sSuffix.Declare(String)
+V.Local.sHeaderLine.Declare(String)
+
+V.Local.sShipVia.Declare(String)
+V.Local.sFreight.Declare(String)
+V.Local.sUserField1Head.Declare(String)
+V.Local.sUserField2Head.Declare(String)
+V.Local.sUserField3Head.Declare(String)
+V.Local.sUserField4Head.Declare(String)
+V.Local.sUserField5Head.Declare(String)
+V.Local.sOrderType.Declare(string)
+V.Local.sOrderDiscPercentage.Declare(String)
+V.Local.sSalesman.Declare(String)
+V.Local.sMarkShipment.Declare(String)
+
+V.Local.sOriginalOrder.Set(V.Args.From)
+V.Local.sNewOrder.Set(V.Args.To)
+V.Local.sCustomerPO.Set(V.Args.CustPO)
+V.Local.sCustomer.Set(V.Args.Customer)
+V.Local.sShipTo.Set(V.Args.ShipTo)
+
+F.Global.Security.GetUserId(V.Caller.User, V.Caller.CompanyCode, V.Local.sUserID)
+
+'F.Intrinsic.String.Build("select RTRIM(CUSTOMER_PO) as P, RTRIM(SHIP_ID) as S, RTRIM(ORDER_LOCATION) as L from V_ORDER_HEADER where ORDER_NO = '{0}'", V.Local.sOriginalOrder, V.Local.sSQL)
+'F.Intrinsic.String.Build("select RTRIM(CUSTOMER_PO) as P, RTRIM(SHIP_ID) as S, RTRIM(ORDER_LOCATION) as L from V_ORDER_HIST_HEAD where ORDER_NO = '{0}'", V.Local.sOriginalOrder, V.Local.sSQL)
+F.Intrinsic.String.Build("select RTRIM(SHIP_VIA), RTRIM(USER_1), RTRIM(USER_2), RTRIM(USER_3), RTRIM(User_4), RTRIM(USER_5), RTRIM(Order_TYPE), RTRIM(SALESMAN) from V_ORDER_HIST_HEAD where ORDER_NO = '{0}'", V.Local.sOriginalOrder, V.Local.sSQL)
+F.ODBC.Connection!Con.ExecuteAndReturn(V.Local.sSQL, V.Local.sRet)
+F.Intrinsic.Control.If(V.Ambient.ExecuteAndReturnEOF.Not)
+	F.Intrinsic.String.Split(V.Local.sRet, "#$#", V.Local.sRet)
+	F.Intrinsic.Control.If(V.Local.sRet.UBound, >, 0)
+		V.Local.sRet.Set(V.Local.sRet(0))
+	F.Intrinsic.Control.EndIf
+	
+	F.Intrinsic.String.Split(V.Local.sRet, "*!*", V.Local.sRet)
+	V.Local.sShipVia.Set(V.Local.sRet(0))
+	V.Local.sUserField1Head.Set(V.Local.sRet(1))
+	V.Local.sUserField2Head.Set(V.Local.sRet(2))
+	V.Local.sUserField3Head.Set(V.Local.sRet(3))
+	V.Local.sUserField4Head.Set(V.Local.sRet(4))
+	V.Local.sUserField5Head.Set(V.Local.sRet(5))
+	V.Local.sOrderType.Set(V.Local.sRet(6))
+	V.Local.sSalesman.Set(V.Local.sRet(7))
+F.Intrinsic.Control.EndIf
+
+'V.Local.sCustomerPO.Set(V.Local.sRet(0).Trim)
+'F.Intrinsic.Control.If(V.Local.sCustomerPO, =, "")
+'	F.Intrinsic.UI.Msgbox("Error: Customer PO is required")
+'	F.Intrinsic.Control.CallSub(Form_Main_Unload)
+'F.Intrinsic.Control.EndIf
+'V.Local.sShipTo.Set(V.Local.sRet(1).Trim)
+'V.Local.sFromLoc.Set(V.Local.sRet(2).Trim)
+
+'add line to ORDUPL Header table, and blank line to extra table
+'F.Data.DataTable.AddRow("ORDUPL", "Transaction", "O", "CustomerNo", V.Global.sCustomer, "OrderNumber", V.Local.sOrder, "UserID", V.Local.sUserID, "OrderType", " ", "OverrideAutoNumbering", "1", "FromLoc", V.Local.sFromLoc, "CustomerPO", V.Local.sCustomerPO, "ShipToID", V.Local.sShipTo)
+F.Data.DataTable.AddRow("ORDUPL", "Transaction", "O", "CustomerNo", V.Local.sCustomer, "OrderNumber", V.Local.sNewOrder, "UserID", V.Local.sUserID, "OrderType", V.Local.sOrderType, "OverrideAutoNumbering", "1", "CustomerPO", V.Local.sCustomerPO, "ShipToID", V.Local.sShipTo, "ShipVia", V.Local.sShipVia, "UserField1Head", V.Local.sUserField1Head, "UserField2Head", V.Local.sUserField2Head, "UserField3Head", V.Local.sUserField3Head, "UserField4Head", V.Local.sUserField4Head, "UserField5Head", V.Local.sUserField5Head, "Salesman", V.Local.sSalesman)
+F.Data.DataTable.AddRow("ORDUPLExtra")
+
+'add the lines to the upload table
+'F.Intrinsic.String.Build("select RTRIM(RECORD_NO) as LINE, RTRIM(LINE_TYPE) as LINE_TYPE, QTY_ORDERED, WEIGHT, RTRIM(UM_ORDER) as UM_ORDER, RTRIM(PART) as PART, PRICE_ORDER as PRICE, COST, RTRIM(DESCRIPTION) as DESCRIPTION, RTRIM(USER_1) as USER_1, RTRIM(USER_2) as USER_2, RTRIM(USER_3) as USER_3, RTRIM(USER_4) as USER_4, RTRIM(USER_5) as USER_5, RTRIM(LOCATION) as LOCATION, DATE_ORDER, DATE_ITEM_PROM, RTRIM(FLAG_TAX_STATUS) as FLAG_TAX_STATUS, RTRIM(PRODUCT_LINE) as PRODUCT_LINE from V_ORDER_LINES where ORDER_NO = '{0}'", V.Local.sOriginalOrder, V.Local.sSQL)
+
+'Modification by FEQ for Metro Steel. Original project does not take into consideration partial shipments from orders in the history table, thus we refrain from getting the quantity from the main query and instead grab it from a dictionary using a sum, then filling the info in.
+'F.Intrinsic.String.Build("select RTRIM(ORDER_LINE) as LINE, RTRIM(LINE_TYPE) as LINE_TYPE, QTY_ORDERED, RTRIM(UM) as UM_ORDER, RTRIM(PART) as PART, PRICE_ORDER as PRICE, COST, RTRIM(DESCRIPTION) as DESCRIPTION, RTRIM(USER_1) as USER_1, RTRIM(USER_2) as USER_2, RTRIM(USER_3) as USER_3, RTRIM(USER_4) as USER_4, RTRIM(USER_5) as USER_5, RTRIM(LOCATION) as LOCATION, RTRIM(FLAG_TAX_STATUS) as FLAG_TAX_STATUS, RTRIM(PRODUCT_LINE) as PRODUCT_LINE from V_ORDER_HIST_LINE where ORDER_NO = '{0}'", V.Local.sOriginalOrder, V.Local.sSQL)
+F.Intrinsic.String.Build("select DISTINCT RTRIM(ORDER_LINE) as LINE, RTRIM(LINE_TYPE) as LINE_TYPE, RTRIM(UM) as UM_ORDER, RTRIM(PART) as PART, PRICE_ORDER as PRICE, COST, RTRIM(DESCRIPTION) as DESCRIPTION, RTRIM(USER_1) as USER_1, RTRIM(USER_2) as USER_2, RTRIM(USER_3) as USER_3, RTRIM(USER_4) as USER_4, RTRIM(USER_5) as USER_5, RTRIM(LOCATION) as LOCATION, RTRIM(FLAG_TAX_STATUS) as FLAG_TAX_STATUS, RTRIM(PRODUCT_LINE) as PRODUCT_LINE from V_ORDER_HIST_LINE where ORDER_NO = '{0}'", V.Local.sOriginalOrder, V.Local.sSQL)
+F.Data.DataTable.CreateFromSQL("dtOrderLines", "Con", V.Local.sSQL)
+
+F.Intrinsic.String.Build("Select RTRIM(ORDER_LINE) as LINE, SUM(QTY_ORDERED) as QTY_ORDERED from V_ORDER_HIST_LINE where ORDER_NO = '{0}' group by LINE", V.Local.sOriginalOrder, V.Local.sSQL)
+F.Data.Dictionary.CreateFromSQL("dicQty", "Con", V.Local.sSQL)
+F.Data.Dictionary.SetDefaultReturn("dicQty", "0.0")
+
+F.Data.DataTable.AddColumn("dtOrderLines", "QTY_ORDERED", "Float")
+
+F.Data.DataTable.FillFromDictionary("dtOrderLines", "dicQty", "LINE", "QTY_ORDERED")
+
+F.Data.Dictionary.Close("dicQty")
+
+F.Intrinsic.Control.For(V.Local.iCounter, 0, V.DataTable.dtOrderLines.RowCount--, 1)
+	'formatting
+	V.Local.sQTY.Set(V.DataTable.dtOrderLines(V.Local.iCounter).QTY_ORDERED!FieldValFloat)
+	
+	F.Intrinsic.String.IsInString(V.Local.sQTY, "-", True, V.Local.bNegativeQuantity)
+	F.Intrinsic.Control.If(V.Local.bNegativeQuantity)
+		F.Intrinsic.String.Replace(V.Local.sQTY, "-", "", V.Local.sQTY)
+		V.Local.sNegativeQuantity.Set("1")
+	F.Intrinsic.Control.Else
+		V.Local.sNegativeQuantity.Set("")
+	F.Intrinsic.Control.EndIf
+	
+	F.Intrinsic.String.Format(V.Local.sQTY,"0.0000",V.Local.sQTY)
+	F.Intrinsic.String.Replace(V.Local.sQTY,".","",V.Local.sQTY)
+	F.Intrinsic.String.LPad(V.Local.sQTY,"0",13,V.Local.sQTY)
+	
+	V.Local.sPrice.Set(V.DataTable.dtOrderLines(V.Local.iCounter).PRICE!FieldValFloat)
+	F.Intrinsic.String.Format(V.Local.sPrice,"0.000000",V.Local.sPrice)
+	F.Intrinsic.String.Replace(V.Local.sPrice,".","",V.Local.sPrice)
+	F.Intrinsic.String.LPad(V.Local.sPrice,"0",16,V.Local.sPrice)
+
+	V.Local.sCost.Set(V.DataTable.dtOrderLines(V.Local.iCounter).COST!FieldValFloat)
+	F.Intrinsic.String.Format(V.Local.sCost,"0.000000",V.Local.sCost)
+	F.Intrinsic.String.Replace(V.Local.sCost,".","",V.Local.sCost)
+	F.Intrinsic.String.LPad(V.Local.sCost,"0",16,V.Local.sCost)
+	
+	'Dates
+'	V.Local.dTemp.Set(V.DataTable.dtOrderLines(V.Local.iCounter).DATE_ORDER!FieldValTrim)
+'	V.Local.sOrderDate.Set(V.Local.dTemp.FormatYYYYMMDD)
+'	
+'	V.Local.dTemp.Set(V.DataTable.dtOrderLines(V.Local.iCounter).DATE_ITEM_PROM!FieldValTrim)
+'	V.Local.sPromiseDate.Set(V.Local.dTemp.FormatYYYYMMDD)
+	
+	'rev
+	V.Local.sPart.Set(V.DataTable.dtOrderLines(V.Local.iCounter).PART!FieldValTrim)
+	F.Intrinsic.Control.If(V.Local.sPart.Length, >, 17)
+		F.Intrinsic.Math.Sub(V.Local.sPart.Length, 17, V.Local.iLength)
+		F.Intrinsic.String.Right(V.Local.sPart, V.Local.iLength, V.Local.sRev)
+		V.Local.sPart.Set(V.Local.sPart.Left17)
+	F.Intrinsic.Control.Else
+		V.Local.sReV.Set("")
+	F.Intrinsic.Control.EndIf
+	
+	V.Local.sLine.Set(V.DataTable.dtOrderLines(V.Local.iCounter).Line!FieldValTrim)
+	V.Local.sLine.Set(V.Local.sLine.Left3)
+	
+	'add the original rows
+	'F.Data.DataTable.AddRow("ORDUPLLines", "LineNumber", V.Local.sLine, "LineType", V.DataTable.dtOrderLines(V.Local.iCounter).LINE_TYPE!FieldValTrim, "QtyOrdered", V.Local.sQTY, "Weight", V.DataTable.dtOrderLines(V.Local.iCounter).WEIGHT!FieldValFloat, "UM", V.DataTable.dtOrderLines(V.Local.iCounter).UM_ORDER!FieldValTrim, "PartNumber", V.Local.sPart, "PartRev", V.Local.sRev, "QuotedPrice", V.Local.sPrice, "Cost", V.Local.sCost, "PartDesc", V.DataTable.dtOrderLines(V.Local.iCounter).DESCRIPTION!FieldValTrim, "UserField1", V.DataTable.dtOrderLines(V.Local.iCounter).USER_1!FieldValTrim, "UserField2", V.DataTable.dtOrderLines(V.Local.iCounter).USER_2!FieldValTrim, "UserField3", V.DataTable.dtOrderLines(V.Local.iCounter).USER_3!FieldValTrim, "UserField4", V.DataTable.dtOrderLines(V.Local.iCounter).USER_4!FieldValTrim, "UserField5", V.DataTable.dtOrderLines(V.Local.iCounter).USER_5!FieldValTrim, "PartLoc", V.DataTable.dtOrderLines(V.Local.iCounter).LOCATION!FieldValTrim, "LineOrderDate", V.Local.sOrderDate, "LinePromiseDate", V.Local.sPromiseDate, "TaxStatusFlag", V.DataTable.dtOrderLines(V.Local.iCounter).FLAG_TAX_STATUS!FieldValTrim, "PL", V.DataTable.dtOrderLines(V.Local.iCounter).PRODUCT_LINE!FieldValTrim, "NegativeFlag", V.Local.sNegativeQuantity)
+	F.Data.DataTable.AddRow("ORDUPLLines", "LineNumber", V.Local.sLine, "LineType", V.DataTable.dtOrderLines(V.Local.iCounter).LINE_TYPE!FieldValTrim, "QtyOrdered", V.Local.sQTY, "UM", V.DataTable.dtOrderLines(V.Local.iCounter).UM_ORDER!FieldValTrim, "PartNumber", V.Local.sPart, "PartRev", V.Local.sRev, "QuotedPrice", V.Local.sPrice, "Cost", V.Local.sCost, "PartDesc", V.DataTable.dtOrderLines(V.Local.iCounter).DESCRIPTION!FieldValTrim, "UserField1", V.DataTable.dtOrderLines(V.Local.iCounter).USER_1!FieldValTrim, "UserField2", V.DataTable.dtOrderLines(V.Local.iCounter).USER_2!FieldValTrim, "UserField3", V.DataTable.dtOrderLines(V.Local.iCounter).USER_3!FieldValTrim, "UserField4", V.DataTable.dtOrderLines(V.Local.iCounter).USER_4!FieldValTrim, "UserField5", V.DataTable.dtOrderLines(V.Local.iCounter).USER_5!FieldValTrim, "PartLoc", V.DataTable.dtOrderLines(V.Local.iCounter).LOCATION!FieldValTrim, "TaxStatusFlag", V.DataTable.dtOrderLines(V.Local.iCounter).FLAG_TAX_STATUS!FieldValTrim, "PL", V.DataTable.dtOrderLines(V.Local.iCounter).PRODUCT_LINE!FieldValTrim, "NegativeFlag", V.Local.sNegativeQuantity)
+F.Intrinsic.Control.Next(V.Local.iCounter)
+
+F.Data.DataTable.Close("dtOrderLines")
+
+F.Intrinsic.Control.Catch
+	F.Intrinsic.String.Build("Project: {0}{1}{1}Subroutine: {2}{1}Error Occurred {3} with description {4}{1}{1}GAB Version: {5}",V.Ambient.ScriptPath,V.Ambient.Newline,V.Ambient.CurrentSubroutine,V.Ambient.ErrorNumber,V.Ambient.ErrorDescription,V.Ambient.GABVersion,V.Local.sError)
+	F.Intrinsic.UI.Msgbox(V.Local.sError)
+	F.Intrinsic.Control.End 
+F.Intrinsic.Control.EndTry
+Program.Sub.CopyOrder.End
+
+Program.Sub.UploadOrder.Start
+F.Intrinsic.Control.Try
+V.Local.sError.Declare
+
+V.Local.sSQL.Declare(String)
+
+GUI.Form_Main.progressBar1.Value(65)
+GUI.Form_Main.lblStatus.Text("Uploading Order...")
+F.Intrinsic.Control.CallSub(CheckParamsTxt)
+F.Intrinsic.Control.CallSub(ORDUPLCreateFile)
+F.Intrinsic.Control.CallSub(ORDUPLSync)
+
+GUI.Form_Main..AlwaysOnTop(True)
+GUI.Form_Main..AlwaysOnTop(False)
+
+F.Intrinsic.Control.Catch
+	F.Intrinsic.String.Build("Project: {0}{1}{1}Subroutine: {2}{1}Error Occurred {3} with description {4}{1}{1}GAB Version: {5}",V.Ambient.ScriptPath,V.Ambient.Newline,V.Ambient.CurrentSubroutine,V.Ambient.ErrorNumber,V.Ambient.ErrorDescription,V.Ambient.GABVersion,V.Local.sError)
+	F.Intrinsic.UI.Msgbox(V.Local.sError)
+	F.Intrinsic.Control.End 
+F.Intrinsic.Control.EndTry
+Program.Sub.UploadOrder.End
+
+Program.Sub.CheckUpload.Start
+F.Intrinsic.Control.Try
+V.Local.sError.Declare
+
+'check if the order was successfully uploaded
+
+V.Local.sSQL.Declare(String)
+V.Local.sRet.Declare(String)
+V.Local.sPath.Declare(String)
+V.Local.bExists.Declare(String)
+V.Local.sFile.Declare(String)
+V.Local.sOrderError.Declare(String)
+V.Local.sOrder.Declare(String)
+
+V.Local.sOrder.Set(V.Args.Order)
+
+F.Intrinsic.String.Build("select ORDER_NO from V_ORDER_HEADER where ORDER_NO = '{0}'", V.Local.sOrder, V.Local.sSQL)
+F.ODBC.Connection!Con.ExecuteAndReturn(V.Local.sSQL, V.Local.sRet)
+
+F.Intrinsic.Control.If(V.Ambient.ExecuteAndReturnEOF)
+
+	'upload failed, get details
+	F.Intrinsic.String.Build("{0}\ORDUP{1}.ERR", V.Caller.FilesDir, V.Caller.CompanyCode, V.Local.sPath)
+	F.Intrinsic.File.Exists(V.Local.sPath, V.Local.bExists)
+	F.Intrinsic.Control.If(V.Local.bExists)
+		F.Intrinsic.File.File2String(V.Local.sPath, V.Local.sFile)
+		F.Intrinsic.String.Split(V.Local.sFile, "ERROR:", V.Local.sFile)
+		V.Local.sOrderError.Set(V.Local.sFile(V.Local.sFile.UBound))
+		F.Intrinsic.String.RegExReplace(V.Local.sOrderError, " {2,}", " ", True, True, V.Local.sOrderError)
+		F.Intrinsic.String.Replace(V.Local.sOrderError, "|", " ", V.Local.sOrderError)
+		F.Intrinsic.String.Build("Order upload failed with error message:{0}{1}{0}Order was unable to be copied.", V.Ambient.NewLine, V.Local.sOrderError, V.Local.sOrderError)
+		F.Intrinsic.UI.MsgBox(V.Local.sOrderError)
+	F.Intrinsic.Control.Else
+		F.Intrinsic.UI.Msgbox("Order was unable to be copied.")
+	F.Intrinsic.Control.EndIf
+	F.Intrinsic.Control.CallSub(Form_Unload)
+F.Intrinsic.Control.Else
+	F.Intrinsic.UI.Msgbox("Order added successfully")
+F.Intrinsic.Control.EndIf
+
+F.Intrinsic.Control.Catch
+	F.Intrinsic.String.Build("Project: {0}{1}{1}Subroutine: {2}{1}Error Occurred {3} with description {4}{1}{1}GAB Version: {5}",V.Ambient.ScriptPath,V.Ambient.Newline,V.Ambient.CurrentSubroutine,V.Ambient.ErrorNumber,V.Ambient.ErrorDescription,V.Ambient.GABVersion,V.Local.sError)
+	F.Intrinsic.UI.Msgbox(V.Local.sError)
+	F.Intrinsic.Control.End 
+F.Intrinsic.Control.EndTry
+Program.Sub.CheckUpload.End
+
+Program.Sub.CheckParamsTxt.Start
+F.Intrinsic.Control.Try
+V.Local.sError.Declare
+
+V.Local.bExists.Declare(Boolean)
+V.Local.sPath.Declare(String)
+F.Intrinsic.String.Build("{0}\GSSPARAM{1}.txt", V.Caller.FilesDir, V.Caller.CompanyCode, V.Local.sPath)
+F.Intrinsic.File.Exists(V.Local.sPath, V.Local.bExists)
+
+F.Intrinsic.Control.If(V.Local.bExists.Not)
+	F.Intrinsic.Control.CallSub(CreateParamsTxt)
+F.Intrinsic.Control.EndIf
+
+F.Intrinsic.Control.Catch
+	F.Intrinsic.String.Build("Project: {0}{1}{1}Subroutine: {2}{1}Error Occurred {3} with description {4}{1}{1}GAB Version: {5}",V.Ambient.ScriptPath,V.Ambient.Newline,V.Ambient.CurrentSubroutine,V.Ambient.ErrorNumber,V.Ambient.ErrorDescription,V.Ambient.GABVersion,V.Local.sError)
+	F.Intrinsic.UI.Msgbox(V.Local.sError)
+	F.Intrinsic.Control.End 
+F.Intrinsic.Control.EndTry
+Program.Sub.CheckParamsTxt.End
+
+Program.Sub.CreateParamsTxt.Start
+F.Intrinsic.Control.Try
+V.Local.sError.Declare
+
+V.Local.sParams.Declare(String)
+V.Local.sPath.Declare(String)
+
+F.Intrinsic.String.Build("WEB ORDER DIRECTORY   = {1}\WEB_ORDERS\{2}{0}WEB ERROR DIRECTORY   = {1}\WEB_ORDERS\{2}\WEB_ERRORS{0}WEB CONVERTED DIR     = {1}\WEB_ORDERS\{2}\CONVERTED{0}WEB UPLOADED DIRECTORY= {1}\WEB_ORDERS\{2}\UPLOADED{0}EMAIL FROM ADDRESS    = {0}EMAIL TO ADDRESS      = ", V.Ambient.NewLine, V.Caller.FilesDir, V.Caller.CompanyCode, V.Local.sParams)
+F.Intrinsic.String.Build("{0}\GSSPARAM{1}.txt", V.Caller.FilesDir, V.Caller.CompanyCode, V.Local.sPath)
+F.Intrinsic.File.String2File(V.Local.sPath, V.Local.sParams)
+
+F.Intrinsic.Control.Catch
+	F.Intrinsic.String.Build("Project: {0}{1}{1}Subroutine: {2}{1}Error Occurred {3} with description {4}{1}{1}GAB Version: {5}",V.Ambient.ScriptPath,V.Ambient.Newline,V.Ambient.CurrentSubroutine,V.Ambient.ErrorNumber,V.Ambient.ErrorDescription,V.Ambient.GABVersion,V.Local.sError)
+	F.Intrinsic.UI.Msgbox(V.Local.sError)
+	F.Intrinsic.Control.End 
+F.Intrinsic.Control.EndTry
+Program.Sub.CreateParamsTxt.End
+
+Program.Sub.OpenOrder.Start
+F.Intrinsic.Control.Try
+V.Local.sError.Declare
+
+V.Local.sSO.Declare(String)
+V.Local.sCustomer.Declare(String)
+V.Local.sParams.Declare(String)
+
+V.Local.sSO.Set(V.Args.Order)
+V.Local.sCustomer.Set(V.Args.Order)
+
+F.Intrinsic.String.Build("{0}!*!O!*!{1}", V.Local.sSO, V.Local.sCustomer, V.Local.sParams)
+F.Global.General.CallWrapperASync(200000, V.Local.sParams)
+
+F.Intrinsic.Control.Catch
+	F.Intrinsic.String.Build("Project: {0}{1}{1}Subroutine: {2}{1}Error Occurred {3} with description {4}{1}{1}GAB Version: {5}",V.Ambient.ScriptPath,V.Ambient.Newline,V.Ambient.CurrentSubroutine,V.Ambient.ErrorNumber,V.Ambient.ErrorDescription,V.Ambient.GABVersion,V.Local.sError)
+	F.Intrinsic.UI.Msgbox(V.Local.sError)
+	F.Intrinsic.Control.End 
+F.Intrinsic.Control.EndTry
+Program.Sub.OpenOrder.End
+
+Program.Sub.CopyExtraText.Start
+F.Intrinsic.Control.Try
+V.Local.sError.Declare
+
+V.Local.sSQL.Declare(String)
+V.Local.sRet.Declare(String)
+V.Local.sFrom.Declare(String)
+V.Local.sTo.Declare(String)
+
+V.Local.sFrom.Set(V.Args.From)
+V.Local.sTo.Set(V.Args.To)
+
+'get HF text
+F.Intrinsic.String.Build("select RTRIM(ORDER_NUM) as ORDER_NUMBER, ORDER_TYPE as TYPE, CAST(ON_SORDR as CHAR) as ON_SORDR, Cast(ON_INVC as CHAR) as ON_INVC, Cast(ON_BOL as CHAR) as ON_BOL, Cast(ON_PKLIST as CHAR) as ON_PKLIST, Cast(ON_QUOTE as CHAR) as ON_QUOTE, RTRIM(TEXT) as TEXT from V_ORDER_H_HF_TEXT where ORDER_NUM = '{0}'", V.Local.sFrom, V.Local.sSQL)
+F.Data.DataTable.CreateFromSQL("dtHFText", "Con", V.Local.sSQL)
+F.Intrinsic.Control.If(V.DataTable.dtHFText.RowCount, >, 0)
+	F.Data.DataTable.SetValue("dtHFText", -1, "ORDER_NUMBER", V.Local.sTo)
+	F.Data.DataTable.SaveToDB("dtHFText", "Con", "ORDER_HF_TEXT", "ORDER_NUMBER", 128)
+F.Intrinsic.Control.EndIf
+F.Data.DataTable.Close("dtHFText")
+
+'get LN text
+F.Intrinsic.String.Build("select RTRIM(ORDER_NUM) as ORDER_NUM, RTRIM(ORDER_LINE) as ORDER_LINE, ORDER_TYPE, RTRIM(TEXT) as TEXT from V_ORDER_H_LN_TEXT where ORDER_NUM = '{0}'", V.Local.sFrom, V.Local.sSQL)
+F.Data.DataTable.CreateFromSQL("dtLNText", "Con", V.Local.sSQL)
+F.Intrinsic.Control.If(V.DataTable.dtLNText.RowCount, >, 0)
+	F.Data.DataTable.SetValue("dtLNText", -1, "ORDER_NUM", V.Local.sTo)
+	F.Data.DataTable.SaveToDB("dtLNText", "Con", "ORDER_LN_TEXT", "ORDER_NUM*!*ORDER_LINE", 128)
+F.Intrinsic.Control.EndIf
+F.Data.DataTable.Close("dtLNText")
+
+F.Intrinsic.Control.Catch
+	F.Intrinsic.String.Build("Project: {0}{1}{1}Subroutine: {2}{1}Error Occurred {3} with description {4}{1}{1}GAB Version: {5}",V.Ambient.ScriptPath,V.Ambient.Newline,V.Ambient.CurrentSubroutine,V.Ambient.ErrorNumber,V.Ambient.ErrorDescription,V.Ambient.GABVersion,V.Local.sError)
+	F.Intrinsic.UI.Msgbox(V.Local.sError)
+	F.Intrinsic.Control.End 
+F.Intrinsic.Control.EndTry
+Program.Sub.CopyExtraText.End
+
+Program.Sub.ClearShip.Start
+F.Intrinsic.Control.Try
+V.Local.sError.Declare
+
+Gui.FormCopySOHist.txtShipTo.Text("")
+
+F.Intrinsic.Control.Catch
+	F.Intrinsic.String.Build("Project: {0}{1}{1}Subroutine: {2}{1}Error Occurred {3} with description {4}{1}{1}GAB Version: {5}",V.Ambient.ScriptPath,V.Ambient.Newline,V.Ambient.CurrentSubroutine,V.Ambient.ErrorNumber,V.Ambient.ErrorDescription,V.Ambient.GABVersion,V.Local.sError)
+	F.Intrinsic.UI.Msgbox(V.Local.sError)
+	F.Intrinsic.Control.End 
+F.Intrinsic.Control.EndTry
+Program.Sub.ClearShip.End
